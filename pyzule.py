@@ -413,6 +413,8 @@ if args.f:
 
     args.f = set(args.f)
     needed = set()
+
+    deps_info = {}
     if args.y:
         deps_info = {
                 "substrate.": "CydiaSubstrate.framework/CydiaSubstrate",
