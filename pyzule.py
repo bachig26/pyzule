@@ -418,7 +418,8 @@ if args.f:
         "cephei.": "Cephei.framework/Cephei",
         "cepheiui.": "CepheiUI.framework/CepheiUI",
         "cepheiprefs.": "CepheiPrefs.framework/CepheiPrefs",
-        "libhdev.": "libhdev.framework/libhdev"
+        "libhdev.": "libhdev.framework/libhdev",
+        "orion.": "Orion.framework/Orion"
     }
 
     if args.t:
@@ -472,6 +473,10 @@ if args.f:
                     elif ".framework" in dep:
                         run(f"install_name_tool -change {dep} {inject_path_exec}/{bn}.framework/{bn} '{actual_path}'", shell=True, check=True, stdout=DEVNULL, stderr=DEVNULL)
                         print(f"[*] fixed dependency in {os.path.basename(dylib)}: {dep} -> {inject_path_exec}/{bn}.framework/{bn}")
+
+    # i'd rather do this than just check frameworks for dependencies.
+    if "orion." in needed:
+        needed.add("substrate.")
 
     for missing in needed:
         real_dep_name = deps_info[missing].split("/")[0]
@@ -596,15 +601,30 @@ if args.d:
     change_plist("enabled documents support", "documents support was already enabled",
                 plist, True, "UISupportsDocumentBrowser", "UIFileSharingEnabled")
 
-# change app name
-if args.n:
-    change_plist(f"changed app name to {args.n}", f"app name was already {args.n}",
-                plist, args.n, "CFBundleDisplayName", "CFBundleName")
-
 # change app version
 if args.v:
     change_plist(f"changed app version to {args.v}", f"app version was already {args.v}",
                 plist, args.v, "CFBundleShortVersionString", "CFBundleVersion")
+
+# change app name
+if args.n:
+    change_plist(f"changed app name to {args.n}", f"app name was already {args.n}",
+                plist, args.n, "CFBundleDisplayName", "CFBundleName")
+    real_count = 0
+
+    # i literally just stole this from bundle id change lol
+    for ext in glob(os.path.join(APP_PATH, "*.lproj")):
+        try:
+            lp_plist = get_plist((ext_plist := os.path.join(ext, "InfoPlist.strings")))
+            lp_plist["CFBundleDisplayName"] = args.n
+            lp_plist["CFBundleName"] = args.n
+            dump_plist(ext_plist, lp_plist)
+            real_count += 1
+        except Exception:
+            pass  # file might not exist
+    if real_count:
+        print("[*] changed localized display names")
+        changed = 1  # i don't even know if this is required anymore but idc
 
 # change app bundle id
 if args.b:
@@ -746,7 +766,7 @@ if args.s:
 # sign app executable with entitlements provided
 if args.x:
     try:
-        run(f"ipsw m sn -fae '{os.path.normpath(args.x)}' {BINARY_PATH}", shell=True, check=True,
+        run(f"ldid -S'{os.path.normpath(args.x)}' {BINARY_PATH}", shell=True, check=True,
             stdout=DEVNULL)
         print("[*] signed binary with entitlements file")
         changed = 1
