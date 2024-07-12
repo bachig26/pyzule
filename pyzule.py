@@ -56,7 +56,7 @@ parser.add_argument("-r", metavar="url", type=str, required=False,
                     help="url schemes to add", nargs="+")
 parser.add_argument("-f", metavar="files", nargs="+", type=str,
                     help="tweak files to inject into the ipa")
-parser.add_argument("-y", action="store_true",
+parser.add_argument("-Nfix", action="store_true",
                     help="Don't auto inject non-essential dependencies")
 parser.add_argument("-u", action="store_true",
                     help="remove UISupportedDevices")
@@ -415,7 +415,7 @@ if args.f:
     needed = set()
 
     deps_info = {}
-    if args.y:
+    if args.Nfix:
         deps_info = {
                 "substrate.": "CydiaSubstrate.framework/CydiaSubstrate",
                 "librocketbootstrap.": "librocketbootstrap.dylib",
@@ -485,10 +485,14 @@ if args.f:
                         print(f"[*] fixed dependency in {os.path.basename(dylib)}: {dep} -> {inject_path_exec}/{bn}.framework/{bn}")
 
     # i'd rather do this than just check frameworks for dependencies.
-    if args.t:
-        needed.add("Substitute.")
+    if args.Nfix:
+        if args.t:
+            needed.add("Substitute.")
+        else:
+            needed.add("substrate.")
     else:
-        needed.add("substrate.")
+        if "orion." in needed:
+            needed.add("substrate.")
 
     for missing in needed:
         real_dep_name = deps_info[missing].split("/")[0]
