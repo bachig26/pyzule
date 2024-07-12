@@ -485,7 +485,9 @@ if args.f:
                         print(f"[*] fixed dependency in {os.path.basename(dylib)}: {dep} -> {inject_path_exec}/{bn}.framework/{bn}")
 
     # i'd rather do this than just check frameworks for dependencies.
-    if "orion." in needed:
+    if args.t:
+        needed.add("Substitute.")
+    else:
         needed.add("substrate.")
 
     for missing in needed:
